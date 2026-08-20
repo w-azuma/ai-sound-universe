@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SoundSight Universe — 音を見る、音を測る、音で満たす</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="scene"></canvas>
+
+      <!-- ===== Setup screen ===== -->
+      <div id="setup">
+        <div class="setup-card">
+          <p class="eyebrow">audio-reactive fireworks / research &amp; accessibility instrument</p>
+          <h1>Sound<span>Sight</span> Universe</h1>
+          <p class="lede">
+            音を夜空に打ち上がる花火として見せながら、同時にスペクトログラムや音程、音量として測ります。
+            声や物音の種類で花火の形も色も変わります。演出にも、音響研究にも、音を目で確かめたい人にも。
+            緊急時の安全装置ではありません。
+          </p>
+          <div class="setup-actions">
+            <button id="btn-mic" class="btn btn-primary">マイクを使う</button>
+            <label class="btn btn-ghost" for="file-input">音声ファイルを開く</label>
+            <input id="file-input" type="file" accept="audio/*" hidden />
+          </div>
+          <p class="setup-note">音声はこの端末内でのみ処理され、どこにも送信されません。</p>
+        </div>
+      </div>
+
+      <!-- ===== Top bar ===== -->
+      <header id="topbar" class="hidden">
+        <div class="brand">Sound<span>Sight</span> Universe</div>
+        <div class="source-label" id="source-label">—</div>
+        <div class="topbar-controls">
+          <button id="btn-instruments" class="toggle-btn">計器 ▸</button>
+          <button id="btn-contrast" class="toggle-btn">高コントラスト</button>
+          <button id="btn-source" class="toggle-btn">ソース変更</button>
+        </div>
+      </header>
+
+      <!-- ===== Bottom playback bar (file mode) ===== -->
+      <div id="playbar" class="hidden">
+        <button id="btn-playpause" class="icon-btn" title="再生 / 一時停止">
+          <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <svg id="icon-pause" viewBox="0 0 24 24" style="display:none"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+        </button>
+        <input id="scrub" type="range" min="0" max="1000" value="0" />
+        <span id="time" class="time">0:00</span>
+      </div>
+
+      <!-- ===== Instruments drawer ===== -->
+      <aside id="drawer" class="hidden">
+        <div class="drawer-scroll">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>感度・校正</h2>
+            </div>
+            <label class="field">
+              検知感度
+              <input id="sensitivity" type="range" min="0" max="100" value="55" />
+            </label>
+            <label class="field field-num">
+              校正オフセット(dB)
+              <input id="calibration" type="number" value="0" step="1" />
+            </label>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2>スペクトログラム</h2>
+              <span class="hint">周波数(対数) × 時間</span>
+            </div>
+            <div class="spectro-wrap">
+              <canvas id="spectrogram"></canvas>
+            </div>
+            <div class="colorbar">
+              <span>弱い</span>
+              <div id="colorbar-gradient" class="colorbar-gradient"></div>
+              <span>強い</span>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2>リアルタイムスペクトル</h2>
+              <span class="hint" id="centroid-readout">重心 — Hz</span>
+            </div>
+            <canvas id="spectrum"></canvas>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2>音程 / ピッチ輪郭</h2>
+            </div>
+            <div class="pitch-readout">
+              <div class="pitch-note" id="pitch-note">—</div>
+              <div class="pitch-detail">
+                <span id="pitch-hz">— Hz</span>
+                <span id="pitch-cents">— cent</span>
+              </div>
+            </div>
+            <canvas id="pitch-contour"></canvas>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2>音量メーター</h2>
+              <span class="hint">Peak / RMS</span>
+            </div>
+            <div class="meters-row">
+              <div class="meter">
+                <div class="meter-track"><div class="meter-fill" id="meter-peak"></div></div>
+                <label>Peak</label>
+                <span id="peak-value">-∞ dB</span>
+              </div>
+              <div class="meter">
+                <div class="meter-track"><div class="meter-fill" id="meter-rms"></div></div>
+                <label>RMS</label>
+                <span id="rms-value">-∞ dB</span>
+              </div>
+            </div>
+            <div class="tag-row" id="classification-tag">待機中</div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2>イベントログ</h2>
+              <div class="log-actions">
+                <button id="btn-export-csv" class="toggle-btn small">CSV</button>
+                <button id="btn-export-png" class="toggle-btn small">画像</button>
+                <button id="btn-clear-log" class="toggle-btn small">クリア</button>
+              </div>
+            </div>
+            <ul id="event-log" class="event-log" aria-live="polite"></ul>
+          </section>
+        </div>
+      </aside>
+
+      <!-- ===== Visual alert ===== -->
+      <div id="alert-flash"></div>
+      <div id="alert-banner" class="hidden">
+        <span id="alert-icon">●</span>
+        <span id="alert-text">—</span>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
